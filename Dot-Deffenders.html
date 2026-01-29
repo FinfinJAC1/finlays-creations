@@ -612,7 +612,7 @@
                 // Shooter dots fire at the ship
                 if (dot.isShooter && dot.shootCooldown <= 0 && dot.y > 50) {
                     shootEnemyLaser(dot.x + dotSize, dot.y + dotSize * 2);
-                    dot.shootCooldown = dot.isBoss ? 40 : 60; // Boss shoots faster
+                    dot.shootCooldown = dot.isBoss ? 80 : 150;
                 }
                 if (dot.shootCooldown > 0) {
                     dot.shootCooldown--;
@@ -922,9 +922,11 @@
         function gameLoop() {
             if (gameRunning && !paused) {
                 updateShipMovement();
-                updateDots();
-                updateLasers();
-                updateEnemyLasers();
+                if (!invincible) {
+                    updateDots();
+                    updateLasers();
+                    updateEnemyLasers();
+                }
             }
             requestAnimationFrame(gameLoop);
         }
