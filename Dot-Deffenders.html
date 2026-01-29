@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dot Defenders</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+            height: 100vh;
+            background: #0a0a1a;
+            cursor: crosshair;
+        }
+
+        #hud {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 40px;
+            align-items: center;
+            z-index: 100;
+        }
+
+        #score {
+            font-size: 32px;
+            color: white;
+        }
+
+        #level {
+            font-size: 32px;
+            color: #4488ff;
+        }
+
+        #lives {
+            font-size: 32px;
+        }
+
+        #game-area {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+
+        .dot {
+            width: 40px;
+            height: 40px;
+            background: #ff0000;
+            border-radius: 50%;
+            position: absolute;
+            box-shadow: 0 0 20px #ff0000;
+        }
+
+        .dot.explode {
+            animation: explode 0.3s ease-out forwards;
+        }
+
+        @keyframes explode {
+            0% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(2);
+                opacity: 0.7;
+                box-shadow: 0 0 60px #ff0000, 0 0 100px #ff6600;
+            }
+            100% {
+                transform: scale(2.5);
+                opacity: 0;
+            }
+        }
+
+        #ship {
+            position: absolute;
+            bottom: 30px;
+            width: 60px;
+            height: 60px;
+            z-index: 50;
+        }
+
+        .laser {
+            position: absolute;
+            width: 4px;
+            height: 20px;
+            background: #ff0000;
+            box-shadow: 0 0 10px #ff0000, 0 0 20px #ff3300;
+            border-radius: 2px;
+        }
+
+        .enemy-laser {
+            position: absolute;
+            width: 4px;
+            height: 20px;
+            background: #ffffff;
+            box-shadow: 0 0 10px #ffffff, 0 0 20px #aaaaff;
+            border-radius: 2px;
+        }
+
+        #start-screen {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            z-index: 200;
+        }
+
+        #start-screen h1 {
+            font-size: 80px;
+            font-weight: bold;
+            color: #ff3300;
+            text-shadow: 0 0 30px #ff3300, 0 0 60px #ff6600;
+            margin-bottom: 30px;
+        }
+
+        #pause-screen {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            z-index: 200;
+            display: none;
+        }
+
+        #pause-screen h1 {
+            font-size: 80px;
+            font-weight: bold;
+            color: #4488ff;
+            text-shadow: 0 0 30px #4488ff, 0 0 60px #2266dd;
+            margin-bottom: 30px;
+        }
+
+        #pause-screen p {
+            font-size: 24px;
+            color: white;
+        }
+
+        #level-screen {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            z-index: 200;
+            display: none;
+        }
+
+        #level-screen h1 {
+            font-size: 100px;
+            font-weight: bold;
+            color: #00ff00;
+            text-shadow: 0 0 30px #00ff00, 0 0 60px #00aa00;
+        }
+
+        #win-screen, #game-over-screen {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            z-index: 200;
+            display: none;
+        }
+
+        #win-screen h1 {
+            font-size: 80px;
+            font-weight: bold;
+            color: #ffff00;
+            text-shadow: 0 0 30px #ffff00, 0 0 60px #ffaa00;
+            margin-bottom: 30px;
+        }
+
+        #game-over-screen h1 {
+            font-size: 80px;
+            font-weight: bold;
+            color: #ff0000;
+            text-shadow: 0 0 30px #ff0000, 0 0 60px #ff6600;
+            margin-bottom: 30px;
+        }
+
+        .play-again-btn {
+            font-size: 24px;
+            padding: 15px 40px;
+            background: #4488ff;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .play-again-btn:hover {
+            background: #2266dd;
+        }
+
+        .star {
+            position: absolute;
+            background: white;
+            border-radius: 50%;
+        }
+    </style>
+</head>
+<body>
+    <div id="hud">
+        <div id="lives"></div>
+        <div id="level">Level: 1</div>
+        <div id="score">Score: 0 / 250</div>
+    </div>
+    <div id="game-area">
+        <svg id="ship" viewBox="0 0 60 60">
+            <!-- X-wing bird's eye view -->
+            <!-- Main body -->
+            <rect x="26" y="15" width="8" height="35" fill="#888" stroke="#666" stroke-width="1"/>
+            <!-- Cockpit -->
+            <ellipse cx="30" cy="20" rx="5" ry="8" fill="#4488ff"/>
+            <!-- Top left wing -->
+            <polygon points="26,25 5,10 5,15 26,32" fill="#aaa" stroke="#888" stroke-width="1"/>
+            <!-- Top right wing -->
+            <polygon points="34,25 55,10 55,15 34,32" fill="#aaa" stroke="#888" stroke-width="1"/>
+            <!-- Bottom left wing -->
+            <polygon points="26,35 5,50 5,45 26,38" fill="#aaa" stroke="#888" stroke-width="1"/>
+            <!-- Bottom right wing -->
+            <polygon points="34,35 55,50 55,45 34,38" fill="#aaa" stroke="#888" stroke-width="1"/>
+            <!-- Wing cannons -->
+            <rect x="3" y="8" width="4" height="12" fill="#ff3300"/>
+            <rect x="53" y="8" width="4" height="12" fill="#ff3300"/>
+            <rect x="3" y="43" width="4" height="12" fill="#ff3300"/>
+            <rect x="53" y="43" width="4" height="12" fill="#ff3300"/>
+            <!-- Engine glow -->
+            <ellipse cx="30" cy="52" rx="4" ry="3" fill="#ff6600"/>
+        </svg>
+    </div>
+    <div id="start-screen">
+        <h1>Dot Defenders</h1>
+        <button class="play-again-btn" onclick="startGame()">Start Game</button>
+    </div>
+    <div id="pause-screen">
+        <h1>Paused</h1>
+        <p>Press ESC to resume</p>
+    </div>
+    <div id="level-screen">
+        <h1>Level <span id="level-number">1</span></h1>
+    </div>
+    <div id="win-screen">
+        <h1>You Win!</h1>
+        <button class="play-again-btn" onclick="restartGame()">Play Again</button>
+    </div>
+    <div id="game-over-screen">
+        <h1>Game Over</h1>
+        <button class="play-again-btn" onclick="restartGame()">Play Again</button>
+    </div>
+
+    <script>
+        let score = 0;
+        let lives = 3;
+        let level = 1;
+        let gameRunning = false;
+        let gameStarted = false;
+        let paused = false;
+        let shipX = window.innerWidth / 2 - 30;
+        let shipY = 30;
+        let invincible = false;
+        let dots = [];
+        let lasers = [];
+        let enemyLasers = [];
+        let spawnInterval;
+        let keysPressed = { left: false, right: false, up: false };
+
+        const dotColors = ['#ff0000', '#ff6600', '#ffff00', '#00ff00', '#00ffff', '#ff00ff', '#ff3399'];
+
+        const gameArea = document.getElementById('game-area');
+        const scoreDisplay = document.getElementById('score');
+        const livesDisplay = document.getElementById('lives');
+        const levelDisplay = document.getElementById('level');
+        const ship = document.getElementById('ship');
+        const winScreen = document.getElementById('win-screen');
+        const gameOverScreen = document.getElementById('game-over-screen');
+        const pauseScreen = document.getElementById('pause-screen');
+        const startScreen = document.getElementById('start-screen');
+        const levelScreen = document.getElementById('level-screen');
+        const levelNumber = document.getElementById('level-number');
+
+        function updateLivesDisplay() {
+            livesDisplay.textContent = '❤️'.repeat(lives);
+        }
+
+        updateLivesDisplay();
+
+        // Create starfield background
+        for (let i = 0; i < 100; i++) {
+            const star = document.createElement('div');
+            star.className = 'star';
+            star.style.left = Math.random() * 100 + '%';
+            star.style.top = Math.random() * 100 + '%';
+            const size = Math.random() * 2 + 1;
+            star.style.width = size + 'px';
+            star.style.height = size + 'px';
+            star.style.opacity = Math.random() * 0.7 + 0.3;
+            gameArea.appendChild(star);
+        }
+
+        // Position ship
+        ship.style.left = shipX + 'px';
+
+        // Click to lock pointer and start playing
+        gameArea.addEventListener('click', () => {
+            if (!paused && gameRunning) {
+                gameArea.requestPointerLock();
+            }
+        });
+
+        // Mouse movement controls ship (with pointer lock)
+        document.addEventListener('mousemove', (e) => {
+            if (!gameRunning || paused) return;
+            if (document.pointerLockElement === gameArea) {
+                shipX += e.movementX;
+                shipX = Math.max(0, Math.min(window.innerWidth - 60, shipX));
+                ship.style.left = shipX + 'px';
+            }
+        });
+
+        // A/D/W/Arrow keys to move (smooth), ESC to pause, any other key to shoot
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                togglePause();
+                return;
+            }
+            if (paused) return;
+            if (e.key === 'a' || e.key === 'A' || e.key === 'ArrowLeft') {
+                e.preventDefault();
+                keysPressed.left = true;
+            } else if (e.key === 'd' || e.key === 'D' || e.key === 'ArrowRight') {
+                e.preventDefault();
+                keysPressed.right = true;
+            } else if (e.key === 'w' || e.key === 'W' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                keysPressed.up = true;
+            } else {
+                e.preventDefault();
+                if (!gameRunning) return;
+                shootLaser();
+            }
+        });
+
+        function togglePause() {
+            if (!gameRunning) return;
+            paused = !paused;
+            if (paused) {
+                pauseScreen.style.display = 'block';
+                document.exitPointerLock();
+            } else {
+                pauseScreen.style.display = 'none';
+                gameArea.requestPointerLock();
+            }
+        }
+
+        document.addEventListener('keyup', (e) => {
+            if (e.key === 'a' || e.key === 'A' || e.key === 'ArrowLeft') {
+                keysPressed.left = false;
+            } else if (e.key === 'd' || e.key === 'D' || e.key === 'ArrowRight') {
+                keysPressed.right = false;
+            } else if (e.key === 'w' || e.key === 'W' || e.key === 'ArrowUp') {
+                keysPressed.up = false;
+            }
+        });
+
+        function updateShipMovement() {
+            if (!gameRunning) return;
+            const moveSpeed = 8;
+            if (keysPressed.left) {
+                shipX = Math.max(0, shipX - moveSpeed);
+                ship.style.left = shipX + 'px';
+            }
+            if (keysPressed.right) {
+                shipX = Math.min(window.innerWidth - 60, shipX + moveSpeed);
+                ship.style.left = shipX + 'px';
+            }
+            if (keysPressed.up) {
+                shipY = Math.min(window.innerHeight / 2, shipY + moveSpeed);
+                ship.style.bottom = shipY + 'px';
+            } else if (shipY > 30) {
+                // Slowly drift back down when not pressing up
+                shipY = Math.max(30, shipY - 3);
+                ship.style.bottom = shipY + 'px';
+            }
+        }
+
+        function shootLaser() {
+            const laser = document.createElement('div');
+            laser.className = 'laser';
+            laser.style.left = (shipX + 28) + 'px';
+            laser.style.bottom = (shipY + 60) + 'px';
+            gameArea.appendChild(laser);
+            lasers.push({
+                element: laser,
+                x: shipX + 28,
+                y: window.innerHeight - shipY - 60
+            });
+        }
+
+        function createDot(forceNormal = false) {
+            const dot = document.createElement('div');
+            dot.className = 'dot';
+
+            const maxX = window.innerWidth - 40;
+            const x = Math.random() * maxX;
+            const y = -40; // Spawn above the screen
+
+            // 3% chance to spawn a white shooter dot (unless forced normal)
+            const isShooter = !forceNormal && Math.random() < 0.03;
+            let color;
+            if (isShooter) {
+                color = '#ffffff';
+            } else {
+                color = dotColors[Math.floor(Math.random() * dotColors.length)];
+            }
+
+            dot.style.background = color;
+            dot.style.boxShadow = `0 0 20px ${color}`;
+            dot.style.left = x + 'px';
+            dot.style.top = y + 'px';
+
+            gameArea.appendChild(dot);
+
+            const baseSpeed = 1.2 * level;
+            let speed = baseSpeed + Math.random() * baseSpeed;
+
+            // White shooter dots are faster
+            if (isShooter) {
+                speed *= 1.5;
+            }
+
+            dots.push({
+                element: dot,
+                x: x,
+                y: y,
+                speed: speed,
+                active: true,
+                isShooter: isShooter,
+                health: isShooter ? 2 : 1,
+                shootCooldown: 0,
+                upwardBoost: 5
+            });
+        }
+
+        function updateDots() {
+            const shipBottom = window.innerHeight - shipY - 60;
+            const shipCenterX = shipX + 30;
+            const shipCenterY = shipBottom + 30;
+
+            dots.forEach(dot => {
+                if (!dot.active) return;
+
+                const dotCenterX = dot.x + 20;
+                const dotCenterY = dot.y + 20;
+
+                // Calculate direction toward ship
+                const dx = shipCenterX - dotCenterX;
+                const dy = shipCenterY - dotCenterY;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                // Normalize and apply speed with random movement
+                if (distance > 0) {
+                    // Sometimes move up, sometimes toward ship
+                    if (Math.random() < 0.05 && dot.upwardBoost > 0.5) {
+                        // Move straight up with some horizontal wobble
+                        const horizontalWobble = (Math.random() - 0.5) * dot.speed;
+                        dot.x += horizontalWobble;
+                        dot.y -= dot.speed * dot.upwardBoost; // Only go up
+                        dot.upwardBoost *= 0.7; // Reduce boost each time
+                    } else {
+                        // Move toward ship with some wobble
+                        const wobble = (Math.random() - 0.5) * 1.2;
+                        const angle = Math.atan2(dy, dx) + wobble;
+                        dot.x += Math.cos(angle) * dot.speed;
+                        dot.y += Math.sin(angle) * dot.speed;
+                    }
+                }
+
+                // Keep within horizontal bounds
+                dot.x = Math.max(0, Math.min(window.innerWidth - 40, dot.x));
+
+                // Reappear from top if dot goes too far up
+                if (dot.y < -100) {
+                    dot.y = -40;
+                    dot.x = Math.random() * (window.innerWidth - 40);
+                    dot.upwardBoost = 3; // Reset boost when respawning
+                }
+
+                dot.element.style.left = dot.x + 'px';
+                dot.element.style.top = dot.y + 'px';
+
+                // Shooter dots fire at the ship
+                if (dot.isShooter && dot.shootCooldown <= 0 && dot.y > 50) {
+                    shootEnemyLaser(dot.x + 20, dot.y + 40);
+                    dot.shootCooldown = 120; // ~2 seconds at 60fps
+                }
+                if (dot.shootCooldown > 0) {
+                    dot.shootCooldown--;
+                }
+
+                // Check collision with ship
+                if (!invincible && distance < 45) {
+                    dot.active = false;
+                    dot.element.classList.add('explode');
+                    setTimeout(() => dot.element.remove(), 300);
+                    loseLife();
+                }
+            });
+        }
+
+        function shootEnemyLaser(x, y) {
+            const laser = document.createElement('div');
+            laser.className = 'enemy-laser';
+            laser.style.left = (x - 2) + 'px';
+            laser.style.top = y + 'px';
+            gameArea.appendChild(laser);
+            enemyLasers.push({
+                element: laser,
+                x: x - 2,
+                y: y
+            });
+        }
+
+        function updateEnemyLasers() {
+            const shipBottom = window.innerHeight - shipY - 60;
+            const shipCenterX = shipX + 30;
+            const shipCenterY = shipBottom + 30;
+
+            for (let i = enemyLasers.length - 1; i >= 0; i--) {
+                const laser = enemyLasers[i];
+                laser.y += 8;
+
+                if (laser.y > window.innerHeight) {
+                    laser.element.remove();
+                    enemyLasers.splice(i, 1);
+                    continue;
+                }
+
+                laser.element.style.top = laser.y + 'px';
+
+                // Check collision with ship
+                if (!invincible) {
+                    const laserCenterX = laser.x + 2;
+                    const laserCenterY = laser.y + 10;
+                    const dx = shipCenterX - laserCenterX;
+                    const dy = shipCenterY - laserCenterY;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+
+                    if (distance < 35) {
+                        laser.element.remove();
+                        enemyLasers.splice(i, 1);
+                        loseLife();
+                    }
+                }
+            }
+        }
+
+        function loseLife() {
+            lives--;
+            updateLivesDisplay();
+            invincible = true;
+            ship.style.opacity = '0.5';
+
+            // Reset all dots and enemy lasers
+            dots.forEach(d => d.element.remove());
+            dots = [];
+            enemyLasers.forEach(l => l.element.remove());
+            enemyLasers = [];
+            for (let i = 0; i < 8; i++) {
+                createDot();
+            }
+
+            if (lives <= 0) {
+                gameOver();
+            } else {
+                setTimeout(() => {
+                    invincible = false;
+                    ship.style.opacity = '1';
+                }, 1500);
+            }
+        }
+
+        function gameOver() {
+            gameRunning = false;
+            clearInterval(spawnInterval);
+            gameOverScreen.style.display = 'block';
+            document.exitPointerLock();
+        }
+
+        function updateLasers() {
+            for (let i = lasers.length - 1; i >= 0; i--) {
+                const laser = lasers[i];
+                laser.y -= 15;
+
+                if (laser.y < 0) {
+                    laser.element.remove();
+                    lasers.splice(i, 1);
+                    continue;
+                }
+
+                laser.element.style.bottom = (window.innerHeight - laser.y) + 'px';
+
+                // Check collision with dots
+                for (let j = dots.length - 1; j >= 0; j--) {
+                    const dot = dots[j];
+                    if (!dot.active) continue;
+
+                    const dotCenterX = dot.x + 20;
+                    const dotCenterY = dot.y + 20;
+                    const laserCenterX = laser.x + 2;
+                    const laserY = laser.y;
+
+                    const distance = Math.sqrt(
+                        Math.pow(dotCenterX - laserCenterX, 2) +
+                        Math.pow(dotCenterY - laserY, 2)
+                    );
+
+                    if (distance < 25) {
+                        // Hit!
+                        laser.element.remove();
+                        lasers.splice(i, 1);
+
+                        dot.health--;
+
+                        if (dot.health <= 0) {
+                            dot.active = false;
+                            dot.element.classList.add('explode');
+                            setTimeout(() => dot.element.remove(), 300);
+
+                            score++;
+                            scoreDisplay.textContent = 'Score: ' + score + ' / 250';
+
+                            // Check for level up (every 50 points)
+                            const newLevel = Math.min(5, Math.floor(score / 50) + 1);
+                            if (newLevel > level) {
+                                level = newLevel;
+                                levelDisplay.textContent = 'Level: ' + level;
+                                // Reset all dots on level up
+                                dots.forEach(d => d.element.remove());
+                                dots = [];
+                                enemyLasers.forEach(l => l.element.remove());
+                                enemyLasers = [];
+
+                                // Show level screen
+                                showLevelScreen(level);
+                            }
+
+                            if (score >= 250) {
+                                winGame();
+                            }
+                        } else {
+                            // Flash to show hit but not destroyed
+                            dot.element.style.opacity = '0.5';
+                            setTimeout(() => {
+                                if (dot.active) dot.element.style.opacity = '1';
+                            }, 100);
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+
+        function showLevelScreen(lvl) {
+            gameRunning = false;
+            levelNumber.textContent = lvl;
+            levelScreen.style.display = 'block';
+
+            setTimeout(() => {
+                levelScreen.style.display = 'none';
+                gameRunning = true;
+                // Spawn new dots after level screen
+                for (let i = 0; i < 8; i++) {
+                    createDot();
+                }
+            }, 2000);
+        }
+
+        function winGame() {
+            gameRunning = false;
+            clearInterval(spawnInterval);
+            winScreen.style.display = 'block';
+            document.exitPointerLock();
+        }
+
+        function restartGame() {
+            // Clear existing dots and lasers
+            dots.forEach(d => d.element.remove());
+            lasers.forEach(l => l.element.remove());
+            enemyLasers.forEach(l => l.element.remove());
+            dots = [];
+            lasers = [];
+            enemyLasers = [];
+
+            // Reset game state
+            score = 0;
+            lives = 3;
+            level = 1;
+            gameRunning = true;
+            paused = false;
+            invincible = false;
+            shipX = window.innerWidth / 2 - 30;
+            shipY = 30;
+            gameArea.requestPointerLock();
+
+            // Update displays
+            scoreDisplay.textContent = 'Score: 0 / 250';
+            levelDisplay.textContent = 'Level: 1';
+            updateLivesDisplay();
+            ship.style.left = shipX + 'px';
+            ship.style.bottom = shipY + 'px';
+            ship.style.opacity = '1';
+            winScreen.style.display = 'none';
+            gameOverScreen.style.display = 'none';
+
+            // Create initial dots
+            for (let i = 0; i < 8; i++) {
+                createDot();
+            }
+
+            // Restart spawning
+            clearInterval(spawnInterval);
+            spawnInterval = setInterval(() => {
+                if (gameRunning && dots.filter(d => d.active).length < 15) {
+                    createDot();
+                }
+            }, 800);
+        }
+
+        function startGame() {
+            startScreen.style.display = 'none';
+            gameStarted = true;
+            gameRunning = true;
+
+            // Create initial dots
+            for (let i = 0; i < 8; i++) {
+                createDot();
+            }
+
+            // Start spawning
+            spawnInterval = setInterval(() => {
+                if (gameRunning && dots.filter(d => d.active).length < 15) {
+                    createDot();
+                }
+            }, 800);
+
+            gameArea.requestPointerLock();
+        }
+
+        // Game loop
+        function gameLoop() {
+            if (gameRunning && !paused) {
+                updateShipMovement();
+                updateDots();
+                updateLasers();
+                updateEnemyLasers();
+            }
+            requestAnimationFrame(gameLoop);
+        }
+
+        gameLoop();
+    </script>
+</body>
+</html>
