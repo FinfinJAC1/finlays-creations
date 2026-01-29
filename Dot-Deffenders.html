@@ -248,6 +248,48 @@
             display: none;
         }
 
+        #record-btn {
+            position: fixed;
+            top: 15px;
+            right: 15px;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: 2px solid white;
+            background: transparent;
+            cursor: pointer;
+            z-index: 300;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+        }
+
+        #record-btn .dot-icon {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #ff0000;
+            transition: all 0.2s;
+        }
+
+        #record-btn.recording .dot-icon {
+            width: 14px;
+            height: 14px;
+            border-radius: 3px;
+            background: #ff0000;
+        }
+
+        #record-btn.recording {
+            border-color: #ff0000;
+            animation: pulse-border 1s infinite;
+        }
+
+        @keyframes pulse-border {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(255,0,0,0.4); }
+            50% { box-shadow: 0 0 0 6px rgba(255,0,0,0); }
+        }
+
         .star {
             position: absolute;
             background: white;
@@ -256,6 +298,7 @@
     </style>
 </head>
 <body>
+    <button id="record-btn" onclick="toggleRecording()"><div class="dot-icon"></div></button>
     <div id="hud">
         <div id="lives"></div>
         <div id="level">Level: 1</div>
@@ -887,6 +930,55 @@
         }
 
         gameLoop();
+
+        // Screen recording
+        let mediaRecorder = null;
+        let recordedChunks = [];
+        const recordBtn = document.getElementById('record-btn');
+
+        async function toggleRecording() {
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+                mediaRecorder.stop();
+                return;
+            }
+
+            try {
+                const stream = await navigator.mediaDevices.getDisplayMedia({
+                    video: { mediaSource: 'tab' },
+                    preferCurrentTab: true
+                });
+
+                recordedChunks = [];
+                mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+
+                mediaRecorder.ondataavailable = (e) => {
+                    if (e.data.size > 0) recordedChunks.push(e.data);
+                };
+
+                mediaRecorder.onstop = () => {
+                    stream.getTracks().forEach(t => t.stop());
+                    recordBtn.classList.remove('recording');
+
+                    const blob = new Blob(recordedChunks, { type: 'video/webm' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'Dot-Deffenders-' + Date.now() + '.webm';
+                    a.click();
+                    URL.revokeObjectURL(url);
+                };
+
+                mediaRecorder.start();
+                recordBtn.classList.add('recording');
+
+                // Stop if user ends share
+                stream.getVideoTracks()[0].onended = () => {
+                    if (mediaRecorder.state === 'recording') mediaRecorder.stop();
+                };
+            } catch (err) {
+                // User cancelled the share dialog
+            }
+        }
     </script>
 </body>
 </html>
