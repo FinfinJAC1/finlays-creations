@@ -536,7 +536,7 @@
 
             gameArea.appendChild(dot);
 
-            const baseSpeed = 1.2 * Math.pow(1.05, level - 1);
+            const baseSpeed = 0.7 * Math.pow(1.05, level - 1);
             let speed = baseSpeed + Math.random() * baseSpeed;
 
             // White shooter dots are faster
@@ -697,7 +697,7 @@
                 setTimeout(() => {
                     invincible = false;
                     ship.style.opacity = '1';
-                }, 1500);
+                }, 5000);
             }
         }
 
