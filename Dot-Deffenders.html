@@ -203,6 +203,51 @@
             background: #2266dd;
         }
 
+        .boss-dot {
+            width: 120px;
+            height: 120px;
+            background: #ffffff;
+            border-radius: 50%;
+            position: absolute;
+            box-shadow: 0 0 40px #ffffff, 0 0 80px #aaaaff;
+        }
+
+        .boss-dot.explode {
+            animation: explode 0.5s ease-out forwards;
+        }
+
+        #boss-health-bar {
+            position: fixed;
+            top: 70px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 300px;
+            height: 20px;
+            background: #333;
+            border-radius: 10px;
+            z-index: 100;
+            display: none;
+        }
+
+        #boss-health-fill {
+            height: 100%;
+            background: #ff0000;
+            border-radius: 10px;
+            width: 100%;
+            transition: width 0.2s;
+        }
+
+        #boss-label {
+            position: fixed;
+            top: 95px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 16px;
+            color: white;
+            z-index: 100;
+            display: none;
+        }
+
         .star {
             position: absolute;
             background: white;
@@ -214,8 +259,10 @@
     <div id="hud">
         <div id="lives"></div>
         <div id="level">Level: 1</div>
-        <div id="score">Score: 0 / 250</div>
+        <div id="score">Score: 0 / 175</div>
     </div>
+    <div id="boss-health-bar"><div id="boss-health-fill"></div></div>
+    <div id="boss-label">BOSS</div>
     <div id="game-area">
         <svg id="ship" viewBox="0 0 60 60">
             <!-- X-wing bird's eye view -->
@@ -277,6 +324,15 @@
         let keysPressed = { left: false, right: false, up: false };
 
         const dotColors = ['#ff0000', '#ff6600', '#ffff00', '#00ff00', '#00ffff', '#ff00ff', '#ff3399'];
+        // Level thresholds: 25, 55, 90, 130, 175
+        const levelThresholds = [25, 55, 90, 130, 175];
+
+        function getLevelForScore(s) {
+            for (let i = 0; i < levelThresholds.length; i++) {
+                if (s < levelThresholds[i]) return i + 1;
+            }
+            return 5;
+        }
 
         const gameArea = document.getElementById('game-area');
         const scoreDisplay = document.getElementById('score');
@@ -289,6 +345,10 @@
         const startScreen = document.getElementById('start-screen');
         const levelScreen = document.getElementById('level-screen');
         const levelNumber = document.getElementById('level-number');
+        const bossHealthBar = document.getElementById('boss-health-bar');
+        const bossHealthFill = document.getElementById('boss-health-fill');
+        const bossLabel = document.getElementById('boss-label');
+        let bossActive = false;
 
         function updateLivesDisplay() {
             livesDisplay.textContent = '❤️'.repeat(lives);
@@ -417,8 +477,8 @@
             const x = Math.random() * maxX;
             const y = -40; // Spawn above the screen
 
-            // 3% chance to spawn a white shooter dot (unless forced normal)
-            const isShooter = !forceNormal && Math.random() < 0.03;
+            // 5% chance to spawn a white shooter dot (unless forced normal)
+            const isShooter = !forceNormal && Math.random() < 0.05;
             let color;
             if (isShooter) {
                 color = '#ffffff';
@@ -433,12 +493,12 @@
 
             gameArea.appendChild(dot);
 
-            const baseSpeed = 1.2 * level;
+            const baseSpeed = 1.2 * Math.pow(1.05, level - 1);
             let speed = baseSpeed + Math.random() * baseSpeed;
 
             // White shooter dots are faster
             if (isShooter) {
-                speed *= 1.5;
+                speed *= 2.5;
             }
 
             dots.push({
@@ -448,6 +508,7 @@
                 speed: speed,
                 active: true,
                 isShooter: isShooter,
+                isBoss: false,
                 health: isShooter ? 2 : 1,
                 shootCooldown: 0,
                 upwardBoost: 5
@@ -462,40 +523,44 @@
             dots.forEach(dot => {
                 if (!dot.active) return;
 
-                const dotCenterX = dot.x + 20;
-                const dotCenterY = dot.y + 20;
+                const dotSize = dot.isBoss ? 60 : 20;
+                const dotCenterX = dot.x + dotSize;
+                const dotCenterY = dot.y + dotSize;
 
                 // Calculate direction toward ship
                 const dx = shipCenterX - dotCenterX;
                 const dy = shipCenterY - dotCenterY;
                 const distance = Math.sqrt(dx * dx + dy * dy);
 
-                // Normalize and apply speed with random movement
-                if (distance > 0) {
-                    // Sometimes move up, sometimes toward ship
-                    if (Math.random() < 0.05 && dot.upwardBoost > 0.5) {
-                        // Move straight up with some horizontal wobble
-                        const horizontalWobble = (Math.random() - 0.5) * dot.speed;
-                        dot.x += horizontalWobble;
-                        dot.y -= dot.speed * dot.upwardBoost; // Only go up
-                        dot.upwardBoost *= 0.7; // Reduce boost each time
-                    } else {
-                        // Move toward ship with some wobble
-                        const wobble = (Math.random() - 0.5) * 1.2;
-                        const angle = Math.atan2(dy, dx) + wobble;
-                        dot.x += Math.cos(angle) * dot.speed;
-                        dot.y += Math.sin(angle) * dot.speed;
+                // Boss doesn't move
+                if (!dot.isBoss) {
+                    // Normalize and apply speed with random movement
+                    if (distance > 0) {
+                        // Sometimes move up, sometimes toward ship
+                        if (Math.random() < 0.05 && dot.upwardBoost > 0.5) {
+                            // Move straight up with some horizontal wobble
+                            const horizontalWobble = (Math.random() - 0.5) * dot.speed;
+                            dot.x += horizontalWobble;
+                            dot.y -= dot.speed * dot.upwardBoost; // Only go up
+                            dot.upwardBoost *= 0.7; // Reduce boost each time
+                        } else {
+                            // Move toward ship with some wobble
+                            const wobble = (Math.random() - 0.5) * 1.2;
+                            const angle = Math.atan2(dy, dx) + wobble;
+                            dot.x += Math.cos(angle) * dot.speed;
+                            dot.y += Math.sin(angle) * dot.speed;
+                        }
                     }
-                }
 
-                // Keep within horizontal bounds
-                dot.x = Math.max(0, Math.min(window.innerWidth - 40, dot.x));
+                    // Keep within horizontal bounds
+                    dot.x = Math.max(0, Math.min(window.innerWidth - 40, dot.x));
 
-                // Reappear from top if dot goes too far up
-                if (dot.y < -100) {
-                    dot.y = -40;
-                    dot.x = Math.random() * (window.innerWidth - 40);
-                    dot.upwardBoost = 3; // Reset boost when respawning
+                    // Reappear from top if dot goes too far up
+                    if (dot.y < -100) {
+                        dot.y = -40;
+                        dot.x = Math.random() * (window.innerWidth - 40);
+                        dot.upwardBoost = 5; // Reset boost when respawning
+                    }
                 }
 
                 dot.element.style.left = dot.x + 'px';
@@ -503,15 +568,16 @@
 
                 // Shooter dots fire at the ship
                 if (dot.isShooter && dot.shootCooldown <= 0 && dot.y > 50) {
-                    shootEnemyLaser(dot.x + 20, dot.y + 40);
-                    dot.shootCooldown = 120; // ~2 seconds at 60fps
+                    shootEnemyLaser(dot.x + dotSize, dot.y + dotSize * 2);
+                    dot.shootCooldown = dot.isBoss ? 40 : 60; // Boss shoots faster
                 }
                 if (dot.shootCooldown > 0) {
                     dot.shootCooldown--;
                 }
 
                 // Check collision with ship
-                if (!invincible && distance < 45) {
+                const hitRadius = dot.isBoss ? 90 : 45;
+                if (!invincible && distance < hitRadius) {
                     dot.active = false;
                     dot.element.classList.add('explode');
                     setTimeout(() => dot.element.remove(), 300);
@@ -627,7 +693,8 @@
                         Math.pow(dotCenterY - laserY, 2)
                     );
 
-                    if (distance < 25) {
+                    const hitSize = dot.isBoss ? 65 : 25;
+                    if (distance < hitSize) {
                         // Hit!
                         laser.element.remove();
                         lasers.splice(i, 1);
@@ -639,11 +706,19 @@
                             dot.element.classList.add('explode');
                             setTimeout(() => dot.element.remove(), 300);
 
-                            score++;
-                            scoreDisplay.textContent = 'Score: ' + score + ' / 250';
+                            if (dot.isBoss) {
+                                bossActive = false;
+                                bossHealthBar.style.display = 'none';
+                                bossLabel.style.display = 'none';
+                                winGame();
+                                break;
+                            }
 
-                            // Check for level up (every 50 points)
-                            const newLevel = Math.min(5, Math.floor(score / 50) + 1);
+                            score++;
+                            scoreDisplay.textContent = 'Score: ' + score + ' / 175';
+
+                            // Check for level up
+                            const newLevel = getLevelForScore(score);
                             if (newLevel > level) {
                                 level = newLevel;
                                 levelDisplay.textContent = 'Level: ' + level;
@@ -657,8 +732,13 @@
                                 showLevelScreen(level);
                             }
 
-                            if (score >= 250) {
-                                winGame();
+                            if (score >= 175 && !bossActive) {
+                                // Clear all dots and spawn boss
+                                dots.forEach(d => d.element.remove());
+                                dots = [];
+                                enemyLasers.forEach(l => l.element.remove());
+                                enemyLasers = [];
+                                spawnBoss();
                             }
                         } else {
                             // Flash to show hit but not destroyed
@@ -666,11 +746,44 @@
                             setTimeout(() => {
                                 if (dot.active) dot.element.style.opacity = '1';
                             }, 100);
+                            if (dot.isBoss) {
+                                bossHealthFill.style.width = (dot.health / 20 * 100) + '%';
+                            }
                         }
                         break;
                     }
                 }
             }
+        }
+
+        function spawnBoss() {
+            bossActive = true;
+            const dot = document.createElement('div');
+            dot.className = 'boss-dot';
+
+            const x = window.innerWidth / 2 - 60;
+            const y = 80;
+
+            dot.style.left = x + 'px';
+            dot.style.top = y + 'px';
+            gameArea.appendChild(dot);
+
+            dots.push({
+                element: dot,
+                x: x,
+                y: y,
+                speed: 0,
+                active: true,
+                isShooter: true,
+                isBoss: true,
+                health: 20,
+                shootCooldown: 0,
+                upwardBoost: 0
+            });
+
+            bossHealthBar.style.display = 'block';
+            bossLabel.style.display = 'block';
+            bossHealthFill.style.width = '100%';
         }
 
         function showLevelScreen(lvl) {
@@ -711,12 +824,15 @@
             gameRunning = true;
             paused = false;
             invincible = false;
+            bossActive = false;
+            bossHealthBar.style.display = 'none';
+            bossLabel.style.display = 'none';
             shipX = window.innerWidth / 2 - 30;
             shipY = 30;
             gameArea.requestPointerLock();
 
             // Update displays
-            scoreDisplay.textContent = 'Score: 0 / 250';
+            scoreDisplay.textContent = 'Score: 0 / 175';
             levelDisplay.textContent = 'Level: 1';
             updateLivesDisplay();
             ship.style.left = shipX + 'px';
