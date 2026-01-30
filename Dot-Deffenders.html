@@ -922,11 +922,9 @@
         function gameLoop() {
             if (gameRunning && !paused) {
                 updateShipMovement();
-                if (!invincible) {
-                    updateDots();
-                    updateLasers();
-                    updateEnemyLasers();
-                }
+                updateDots();
+                updateLasers();
+                updateEnemyLasers();
             }
             requestAnimationFrame(gameLoop);
         }
