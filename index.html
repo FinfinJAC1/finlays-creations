@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Finlay's Creations</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #0a0a1a;
+            color: white;
+            min-height: 100vh;
+        }
+
+        header {
+            text-align: center;
+            padding: 60px 20px 40px;
+        }
+
+        header h1 {
+            font-size: 56px;
+            font-weight: bold;
+            background: linear-gradient(135deg, #ff3300, #ff6600, #ffaa00);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 12px;
+        }
+
+        header p {
+            font-size: 18px;
+            color: #888;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 24px;
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 20px 30px 60px;
+        }
+
+        .card {
+            background: #14142a;
+            border: 1px solid #222;
+            border-radius: 16px;
+            overflow: hidden;
+            transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+            text-decoration: none;
+            color: white;
+            display: block;
+        }
+
+        .card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 8px 30px rgba(255, 51, 0, 0.2);
+            border-color: #ff3300;
+        }
+
+        .card-thumb {
+            width: 100%;
+            height: 180px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 64px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card-body {
+            padding: 20px;
+        }
+
+        .card-body h2 {
+            font-size: 22px;
+            margin-bottom: 8px;
+        }
+
+        .card-body p {
+            font-size: 14px;
+            color: #888;
+            line-height: 1.5;
+        }
+
+        .tag {
+            display: inline-block;
+            margin-top: 12px;
+            padding: 4px 12px;
+            font-size: 12px;
+            border-radius: 20px;
+            background: rgba(255, 51, 0, 0.15);
+            color: #ff6600;
+            border: 1px solid rgba(255, 51, 0, 0.3);
+        }
+
+        /* Dot Defenders card thumbnail */
+        .thumb-dot-defenders {
+            background: radial-gradient(circle at 30% 40%, #ff0000 0%, transparent 40%),
+                        radial-gradient(circle at 70% 60%, #00ffff 0%, transparent 30%),
+                        radial-gradient(circle at 50% 30%, #ff00ff 0%, transparent 35%),
+                        #0a0a1a;
+        }
+
+        .empty-state {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 60px 20px;
+            color: #444;
+            font-size: 16px;
+        }
+
+        /* Starfield background */
+        .star {
+            position: fixed;
+            background: white;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: -1;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Finlay's Creations</h1>
+        <p>Games and apps built from scratch</p>
+    </header>
+
+    <div class="grid" id="app-grid">
+        <!--
+            === HOW TO ADD A NEW APP ===
+            Copy this card template and fill in the details:
+
+            <a class="card" href="games/your-game.html">
+                <div class="card-thumb" style="background: #14142a;">
+                    EMOJI OR PREVIEW HERE
+                </div>
+                <div class="card-body">
+                    <h2>Your Game Name</h2>
+                    <p>Short description of your game.</p>
+                    <span class="tag">Game</span>
+                </div>
+            </a>
+
+            To remove an app, just delete or comment out its <a class="card"> block.
+        -->
+
+        <!-- Dot Defenders -->
+        <a class="card" href="games/dot-defenders.html">
+            <div class="card-thumb thumb-dot-defenders">
+                <svg width="60" height="60" viewBox="0 0 60 60">
+                    <rect x="26" y="15" width="8" height="35" fill="#888" stroke="#666" stroke-width="1"/>
+                    <ellipse cx="30" cy="20" rx="5" ry="8" fill="#4488ff"/>
+                    <polygon points="26,25 5,10 5,15 26,32" fill="#aaa" stroke="#888" stroke-width="1"/>
+                    <polygon points="34,25 55,10 55,15 34,32" fill="#aaa" stroke="#888" stroke-width="1"/>
+                    <polygon points="26,35 5,50 5,45 26,38" fill="#aaa" stroke="#888" stroke-width="1"/>
+                    <polygon points="34,35 55,50 55,45 34,38" fill="#aaa" stroke="#888" stroke-width="1"/>
+                    <rect x="3" y="8" width="4" height="12" fill="#ff3300"/>
+                    <rect x="53" y="8" width="4" height="12" fill="#ff3300"/>
+                    <rect x="3" y="43" width="4" height="12" fill="#ff3300"/>
+                    <rect x="53" y="43" width="4" height="12" fill="#ff3300"/>
+                    <ellipse cx="30" cy="52" rx="4" ry="3" fill="#ff6600"/>
+                </svg>
+            </div>
+            <div class="card-body">
+                <h2>Dot Defenders</h2>
+                <p>Defend against waves of enemy dots. Dodge, shoot, and survive to face the boss.</p>
+                <span class="tag">Game</span>
+            </div>
+        </a>
+
+    </div>
+
+    <script>
+        // Starfield background
+        for (let i = 0; i < 80; i++) {
+            const star = document.createElement('div');
+            star.className = 'star';
+            star.style.left = Math.random() * 100 + '%';
+            star.style.top = Math.random() * 100 + '%';
+            const size = Math.random() * 2 + 0.5;
+            star.style.width = size + 'px';
+            star.style.height = size + 'px';
+            star.style.opacity = Math.random() * 0.5 + 0.1;
+            document.body.appendChild(star);
+        }
+    </script>
+</body>
+</html>
